@@ -1,0 +1,241 @@
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Contract Learning Activity</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* New brand colors */
+        .bg-primary { background-color: #96ccd9; }
+        .text-primary-dark { color: #025159; }
+        .bg-accent-light { background-color: #f2d98d; }
+        .bg-accent-dark { background-color: #d98e04; }
+        .bg-neutral-light { background-color: #f2f2f2; }
+
+        #roll-button, #restart-button {
+            background-color: #025159; /* Darker primary for buttons */
+            transition: background-color 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        #roll-button:hover, #restart-button:hover {
+            background-color: #d98e04; /* Accent dark on hover */
+        }
+
+        @keyframes slide-out-up {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-100%); opacity: 0; }
+        }
+
+        @keyframes slide-in-up {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse-bg {
+            0% { background-color: #F2F2F2; }
+            50% { background-color: #e9e4f5; } /* Slightly lighter neutral for pulse */
+            100% { background-color: #F2F2F2; }
+        }
+
+        .animate-slide-out-up {
+            animation: slide-out-up 0.5s forwards;
+        }
+
+        .animate-slide-in-up {
+            animation: slide-in-up 0.5s forwards;
+        }
+
+        .pulse-background {
+            animation: pulse-bg 1s;
+        }
+    </style>
+</head>
+<body class="bg-primary min-h-screen flex items-center justify-center p-4">
+    <div class="bg-neutral-light p-6 rounded-2xl shadow-xl max-w-2xl w-full">
+        <h1 class="text-3xl font-bold text-center mb-6 text-primary-dark">Contract Elements</h1>
+
+        <!-- Progress Tracker -->
+        <div id="progress" class="text-center text-sm text-primary-dark mb-2 font-medium"></div>
+
+        <!-- Tube Container -->
+        <div id="tube-container" class="relative overflow-hidden h-64 rounded-xl border-2 p-4 flex items-center justify-center bg-neutral-light" style="border-color: #96ccd9;">
+            <div id="content-display" class="absolute w-full h-full flex flex-col justify-start items-center text-center px-4"></div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-8 flex flex-col gap-4">
+            <button id="roll-button" class="py-3 rounded-xl text-white font-semibold">Next Element</button>
+            <button id="restart-button" class="py-3 rounded-xl text-white font-semibold hidden">Start Over</button>
+        </div>
+    </div>
+
+    <script>
+        const contractContent = [
+            {
+                category: "Objectives, Scope and Expected Outcomes",
+                items: ["This section defines what the project aims to achieve, its boundaries, and the anticipated results."]
+            },
+            {
+                category: "Approach and Methodology",
+                items: ["This outlines the specific methods and strategies the consultant will use to perform the services."]
+            },
+            {
+                category: "Project Governance",
+                items: ["This establishes the system for making decisions, managing changes to scope, and handling issues that arise during the project."]
+            },
+            {
+                category: "Contents",
+                items: ["This refers to the overall structure and components that are typically included within the agreement itself."]
+            },
+            {
+                category: "Documentation",
+                items: ["This specifies the types of records, reports, and other written materials to be produced and maintained."]
+            },
+            {
+                category: "Data, Information and Technological Resources",
+                items: ["This details the necessary data, information, and technology that will be utilized or provided for the project."]
+            },
+            {
+                category: "Project Organisation",
+                items: ["This describes the structure and arrangement of the project team and its reporting lines."]
+            },
+            {
+                category: "MCSP’s Human Resources and their Responsibilities",
+                items: ["This identifies the consultant's personnel assigned to the project and their specific duties."]
+            },
+            {
+                category: "Client’s, Recipient’s and Other Stakeholders’ Human Resources and their Roles and Responsibilities",
+                items: ["This clarifies the personnel from the client and other parties involved, along with their respective roles and duties."]
+            },
+            {
+                category: "Timetable and Milestones",
+                items: ["This sets out the project schedule, including key dates and significant achievements or checkpoints."]
+            },
+            {
+                category: "Project Budget",
+                items: ["This provides a detailed breakdown of the financial costs associated with the project."]
+            },
+            {
+                category: "Project Management Methods",
+                items: ["This specifies the techniques and processes used to plan, execute, and control the project's activities."]
+            },
+            {
+                category: "Communications (channels, methods, etc.)",
+                items: ["This defines how information will be exchanged, including the communication channels and methods to be used."]
+            },
+            {
+                category: "Client and/or Recipient Capacity Building",
+                items: ["This addresses activities aimed at enhancing the client's or recipient's ability to perform tasks or manage processes independently after the project."]
+            },
+            {
+                category: "Knowledge Transfer",
+                items: ["This outlines how the consultant's expertise, insights, and lessons learned will be shared with the client's team."]
+            },
+            {
+                category: "Quality and Risk Methodology",
+                items: ["This describes the approaches and procedures for ensuring the quality of deliverables and managing potential project risks."]
+            },
+            {
+                category: "Deliverables",
+                items: ["These are the tangible outputs or results that the consultant is contractually obligated to provide."]
+            }
+        ];
+
+        const contentDisplay = document.getElementById('content-display');
+        const rollButton = document.getElementById('roll-button');
+        const restartButton = document.getElementById('restart-button');
+        const progressDisplay = document.getElementById('progress');
+
+        let currentIndex = 0;
+
+        function updateProgress() {
+            progressDisplay.textContent = `Element ${currentIndex + 1} of ${contractContent.length}`;
+        }
+
+        function showContent(index) {
+            const data = contractContent[index];
+            let itemsHtml = data.items.map(item => `<p class="text-base text-primary-dark mb-1">${item}</p>`).join('');
+
+            const newContent = document.createElement('div');
+            newContent.className = 'absolute w-full h-full flex flex-col justify-start items-center text-center px-4 pt-4 animate-slide-in-up overflow-y-auto';
+            newContent.innerHTML = `
+                <h2 class="text-2xl font-semibold mb-3 text-primary-dark">${data.category}</h2>
+                <div class="text-left w-full px-4">${itemsHtml}</div>
+            `;
+
+            const oldContent = contentDisplay.firstElementChild;
+
+            if (oldContent) {
+                oldContent.classList.add('animate-slide-out-up');
+                const handleAnimationEnd = () => {
+                    oldContent.removeEventListener('animationend', handleAnimationEnd);
+                    if (contentDisplay.contains(oldContent)) {
+                        contentDisplay.removeChild(oldContent);
+                    }
+                    contentDisplay.appendChild(newContent);
+                    document.getElementById('tube-container').classList.add('pulse-background');
+                    setTimeout(() => {
+                        document.getElementById('tube-container').classList.remove('pulse-background');
+                    }, 1000);
+                };
+                oldContent.addEventListener('animationend', handleAnimationEnd);
+
+                setTimeout(() => {
+                    if (oldContent.classList.contains('animate-slide-out-up')) {
+                        oldContent.removeEventListener('animationend', handleAnimationEnd);
+                        if (contentDisplay.contains(oldContent)) {
+                            contentDisplay.removeChild(oldContent);
+                        }
+                        if (!contentDisplay.contains(newContent)) {
+                             contentDisplay.appendChild(newContent);
+                        }
+                        document.getElementById('tube-container').classList.add('pulse-background');
+                        setTimeout(() => {
+                            document.getElementById('tube-container').classList.remove('pulse-background');
+                        }, 1000);
+                    }
+                }, 600);
+            } else {
+                contentDisplay.appendChild(newContent);
+            }
+
+            updateProgress();
+        }
+
+        rollButton.addEventListener('click', () => {
+            rollButton.disabled = true;
+            if (currentIndex < contractContent.length - 1) {
+                currentIndex++;
+                showContent(currentIndex);
+                setTimeout(() => {
+                    rollButton.disabled = false;
+                }, 1100);
+                if (currentIndex === contractContent.length - 1) {
+                    rollButton.classList.add('hidden');
+                    restartButton.classList.remove('hidden');
+                }
+            } else {
+                rollButton.disabled = false;
+            }
+        });
+
+        restartButton.addEventListener('click', () => {
+            currentIndex = 0;
+            showContent(currentIndex);
+            restartButton.classList.add('hidden');
+            rollButton.classList.remove('hidden');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            showContent(currentIndex);
+        });
+    </script>
+</body>
+</html>
