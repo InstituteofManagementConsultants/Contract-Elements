@@ -28,6 +28,22 @@
             background-color: #d98e04; /* Accent dark on hover */
         }
 
+        /* Arrow styling */
+        .nav-arrow {
+            color: #96ccd9; /* Light blue from bg-primary */
+            cursor: pointer;
+            transition: color 0.2s ease-in-out;
+        }
+
+        .nav-arrow:hover {
+            color: #025159; /* Darker primary on hover for contrast */
+        }
+
+        .nav-arrow.disabled {
+            color: #b0c4de; /* Lighter color for disabled arrows */
+            cursor: not-allowed;
+        }
+
         @keyframes slide-out-up {
             from { transform: translateY(0); opacity: 1; }
             to { transform: translateY(-100%); opacity: 0; }
@@ -35,6 +51,16 @@
 
         @keyframes slide-in-up {
             from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slide-out-down { /* Animation for going back */
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(100%); opacity: 0; }
+        }
+
+        @keyframes slide-in-down { /* Animation for coming back */
+            from { transform: translateY(-100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
 
@@ -50,6 +76,14 @@
 
         .animate-slide-in-up {
             animation: slide-in-up 0.5s forwards;
+        }
+
+        .animate-slide-out-down { /* Apply this class when moving back */
+            animation: slide-out-down 0.5s forwards;
+        }
+
+        .animate-slide-in-down { /* Apply this class when coming back */
+            animation: slide-in-down 0.5s forwards;
         }
 
         .pulse-background {
@@ -68,6 +102,19 @@
         <div id="tube-container" class="relative overflow-hidden h-64 rounded-xl border-2 p-4 flex items-center justify-center bg-neutral-light" style="border-color: #96ccd9;">
             <div id="content-display" class="absolute w-full h-full flex flex-col justify-start items-center text-center px-4"></div>
         </div>
+
+        <!-- Navigation Arrows -->
+        <div class="flex justify-center items-center mt-6 mb-4">
+            <!-- Left Arrow (Solid Triangle) -->
+            <svg id="arrow-left" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="nav-arrow w-8 h-8 mr-4 disabled">
+                <path d="M15 5 L7 12 L15 19 Z" fill="currentColor"/>
+            </svg>
+            <!-- Right Arrow (Solid Triangle) -->
+            <svg id="arrow-right" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="nav-arrow w-8 h-8">
+                <path d="M9 5 L17 12 L9 19 Z" fill="currentColor"/>
+            </svg>
+        </div>
+
 
         <!-- Buttons -->
         <div class="mt-8 flex flex-col gap-4">
@@ -152,19 +199,44 @@
         const rollButton = document.getElementById('roll-button');
         const restartButton = document.getElementById('restart-button');
         const progressDisplay = document.getElementById('progress');
+        const arrowLeft = document.getElementById('arrow-left');
+        const arrowRight = document.getElementById('arrow-right');
 
         let currentIndex = 0;
+        let isTransitioning = false; // Flag to prevent rapid clicks during animation
 
         function updateProgress() {
             progressDisplay.textContent = `Element ${currentIndex + 1} of ${contractContent.length}`;
+            updateArrowStates();
         }
 
-        function showContent(index) {
+        function updateArrowStates() {
+            if (currentIndex === 0) {
+                arrowLeft.classList.add('disabled');
+            } else {
+                arrowLeft.classList.remove('disabled');
+            }
+
+            if (currentIndex === contractContent.length - 1) {
+                arrowRight.classList.add('disabled');
+                rollButton.classList.add('hidden');
+                restartButton.classList.remove('hidden');
+            } else {
+                arrowRight.classList.remove('disabled');
+                rollButton.classList.remove('hidden');
+                restartButton.classList.add('hidden');
+            }
+        }
+
+        function showContent(index, direction = 'next') {
+            if (isTransitioning) return; // Prevent new transition if one is already in progress
+            isTransitioning = true;
+
             const data = contractContent[index];
             let itemsHtml = data.items.map(item => `<p class="text-base text-primary-dark mb-1">${item}</p>`).join('');
 
             const newContent = document.createElement('div');
-            newContent.className = 'absolute w-full h-full flex flex-col justify-start items-center text-center px-4 pt-4 animate-slide-in-up overflow-y-auto';
+            newContent.className = 'absolute w-full h-full flex flex-col justify-start items-center text-center px-4 pt-4 overflow-y-auto';
             newContent.innerHTML = `
                 <h2 class="text-2xl font-semibold mb-3 text-primary-dark">${data.category}</h2>
                 <div class="text-left w-full px-4">${itemsHtml}</div>
@@ -173,64 +245,88 @@
             const oldContent = contentDisplay.firstElementChild;
 
             if (oldContent) {
-                oldContent.classList.add('animate-slide-out-up');
-                const handleAnimationEnd = () => {
-                    oldContent.removeEventListener('animationend', handleAnimationEnd);
+                // Remove all animation classes before adding new ones
+                oldContent.classList.remove('animate-slide-in-up', 'animate-slide-out-up', 'animate-slide-in-down', 'animate-slide-out-down');
+                
+                // Add the appropriate slide-out animation
+                if (direction === 'next') {
+                    oldContent.classList.add('animate-slide-out-up');
+                } else {
+                    oldContent.classList.add('animate-slide-out-down');
+                }
+
+                // Listen for the end of the slide-out animation
+                const handleOldAnimationEnd = () => {
+                    oldContent.removeEventListener('animationend', handleOldAnimationEnd);
+                    // Ensure old content is removed
                     if (contentDisplay.contains(oldContent)) {
                         contentDisplay.removeChild(oldContent);
                     }
+                    
+                    // Now, append new content and start its slide-in animation
                     contentDisplay.appendChild(newContent);
+                    if (direction === 'next') {
+                        newContent.classList.add('animate-slide-in-up');
+                    } else {
+                        newContent.classList.add('animate-slide-in-down');
+                    }
+
+                    // Apply pulse background animation
                     document.getElementById('tube-container').classList.add('pulse-background');
                     setTimeout(() => {
                         document.getElementById('tube-container').classList.remove('pulse-background');
-                    }, 1000);
+                        isTransitioning = false; // End transition after pulse
+                    }, 1000); // Pulse animation duration
                 };
-                oldContent.addEventListener('animationend', handleAnimationEnd);
 
+                oldContent.addEventListener('animationend', handleOldAnimationEnd);
+
+                // Fallback timeout in case animationend doesn't fire (e.g., element removed too quickly)
+                // This timeout should be slightly longer than the slide-out animation
                 setTimeout(() => {
-                    if (oldContent.classList.contains('animate-slide-out-up')) {
-                        oldContent.removeEventListener('animationend', handleAnimationEnd);
-                        if (contentDisplay.contains(oldContent)) {
-                            contentDisplay.removeChild(oldContent);
-                        }
-                        if (!contentDisplay.contains(newContent)) {
-                             contentDisplay.appendChild(newContent);
-                        }
-                        document.getElementById('tube-container').classList.add('pulse-background');
-                        setTimeout(() => {
-                            document.getElementById('tube-container').classList.remove('pulse-background');
-                        }, 1000);
+                    if (oldContent.classList.contains('animate-slide-out-up') || oldContent.classList.contains('animate-slide-out-down')) {
+                        // If animationend didn't fire, manually trigger the sequence
+                        handleOldAnimationEnd(); // This will remove old, add new, and start new animation
                     }
-                }, 600);
+                }, 550); // Slightly longer than 0.5s animation
             } else {
+                // Initial content display
                 contentDisplay.appendChild(newContent);
+                newContent.classList.add('animate-slide-in-up');
+                document.getElementById('tube-container').classList.add('pulse-background');
+                setTimeout(() => {
+                    document.getElementById('tube-container').classList.remove('pulse-background');
+                    isTransitioning = false; // End transition
+                }, 1000);
             }
 
             updateProgress();
         }
 
         rollButton.addEventListener('click', () => {
-            rollButton.disabled = true;
-            if (currentIndex < contractContent.length - 1) {
+            if (!isTransitioning && currentIndex < contractContent.length - 1) {
                 currentIndex++;
-                showContent(currentIndex);
-                setTimeout(() => {
-                    rollButton.disabled = false;
-                }, 1100);
-                if (currentIndex === contractContent.length - 1) {
-                    rollButton.classList.add('hidden');
-                    restartButton.classList.remove('hidden');
-                }
-            } else {
-                rollButton.disabled = false;
+                showContent(currentIndex, 'next');
+            }
+        });
+
+        arrowRight.addEventListener('click', () => {
+            if (!isTransitioning && currentIndex < contractContent.length - 1) {
+                currentIndex++;
+                showContent(currentIndex, 'next');
+            }
+        });
+
+        arrowLeft.addEventListener('click', () => {
+            if (!isTransitioning && currentIndex > 0) {
+                currentIndex--;
+                showContent(currentIndex, 'prev');
             }
         });
 
         restartButton.addEventListener('click', () => {
             currentIndex = 0;
-            showContent(currentIndex);
-            restartButton.classList.add('hidden');
-            rollButton.classList.remove('hidden');
+            showContent(currentIndex, 'next');
         });
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -239,3 +335,4 @@
     </script>
 </body>
 </html>
+
